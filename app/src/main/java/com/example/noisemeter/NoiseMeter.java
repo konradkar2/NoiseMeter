@@ -1,10 +1,14 @@
 package com.example.noisemeter;
 import android.app.Activity;
+import android.content.ContextWrapper;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.util.Log;
 import android.widget.TextView;
+
+import java.io.File;
 
 
 public class NoiseMeter extends Activity {
@@ -12,8 +16,7 @@ public class NoiseMeter extends Activity {
     TextView mStatusView;
     MediaRecorder mRecorder;
     Thread runner;
-    private static double mEMA = 0.0;
-    static final private double EMA_FILTER = 0.6;
+    private static double MAX_AMPLITUDE = 32767.0;
 
     final Runnable updater = new Runnable(){
 
@@ -39,7 +42,7 @@ public class NoiseMeter extends Activity {
                     {
                         try
                         {
-                            Thread.sleep(1000);
+                            Thread.sleep(50);
                             Log.i("Noise", "Tock");
                         } catch (InterruptedException e) { };
                         mHandler.post(updater);
@@ -47,7 +50,7 @@ public class NoiseMeter extends Activity {
                 }
             };
             try {
-                Thread.sleep(1000);
+                Thread.sleep(50);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -69,17 +72,19 @@ public class NoiseMeter extends Activity {
     }
 
     public void startRecorder(){
+        ContextWrapper cw = new ContextWrapper(getApplicationContext());
+        String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
+        File file = new File(filepath);
         if (mRecorder == null)
         {
             mRecorder = new MediaRecorder();
-            mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mRecorder.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION);
             mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
             mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-            mRecorder.setOutputFile("/dev/null");
+            mRecorder.setOutputFile(filepath);
             try
             {
                 mRecorder.prepare();
-                android.util.Log.e("[Monkey]", "IOException: ");
 
             }catch (java.io.IOException ioe) {
                 android.util.Log.e("[Monkey]", "IOException: " + android.util.Log.getStackTraceString(ioe));
@@ -116,22 +121,19 @@ public class NoiseMeter extends Activity {
     }
 
     public void updateTv(){
-        mStatusView.setText(Double.toString((getAmplitudeEMA())) + " dB");
-    }
-    public double soundDb(double ampl){
-        return  20 * Math.log10(getAmplitudeEMA() / ampl);
+        mStatusView.setText(getAmplitudeDb() + " dB");
     }
     public double getAmplitude() {
         if (mRecorder != null)
-            return  (mRecorder.getMaxAmplitude());
+            return  mRecorder.getMaxAmplitude();
         else
             return 0;
 
     }
-    public double getAmplitudeEMA() {
+    public double getAmplitudeDb() {
         double amp =  getAmplitude();
-        mEMA = EMA_FILTER * amp + (1.0 - EMA_FILTER) * mEMA;
-        return mEMA;
+        android.util.Log.w("[Monkey]", "p: " + Double.toString(amp));
+        return 20*Math.log10(amp);
     }
 
 }
