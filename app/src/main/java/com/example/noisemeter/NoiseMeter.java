@@ -37,12 +37,18 @@ public class NoiseMeter extends Activity {
         int thresholdDb = 60;
         soundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs);
         soundDetector.executeOnThresholdReached(() ->
-            {
-                android.util.Log.e("[Monkey]", "Executing...: ");
-                showTimeDialog();
-                mStatusView.setText("Done");
-                mProgressBar.setVisibility(View.GONE);
-            }
+                {
+                    android.util.Log.e("[Monkey]", "Executing...: ");
+                    this.runOnUiThread(new Runnable()
+                    {
+                        public void run() {
+                            showTimeDialog();
+                            mStatusView.setText("Done");
+                            mProgressBar.setVisibility(View.GONE);
+                        }
+                    });
+
+                }
         );
     }
 
