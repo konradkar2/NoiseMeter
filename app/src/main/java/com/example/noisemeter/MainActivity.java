@@ -1,60 +1,81 @@
 package com.example.noisemeter;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
-import android.Manifest;
-import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
+import android.widget.ScrollView;
+import android.widget.TextView;
+
+import java.io.IOException;
+import java.util.concurrent.CompletableFuture;
+
 
 public class MainActivity extends AppCompatActivity {
-    private Button button;
+    TextView mTextView;
+    LogStoreTextView logStoreTextView;
+    Button mStartServerButton;
+    Button mSyncClientButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mTextView = (TextView) findViewById(R.id.textViewLog);
+        logStoreTextView = new LogStoreTextView(mTextView);
+        Logger.instance().initialize(logStoreTextView);
+        Logger.instance().i("Test");
 
-        button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
+        mStartServerButton = (Button) findViewById(R.id.syncServer);
+        mSyncClientButton = (Button) findViewById(R.id.syncClient);
+
+        mStartServerButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                openActivity2();
+                mStartServerButton.setEnabled(false);
+                CompletableFuture.runAsync(() ->
+                {
+                    Server server = new Server();
+                    try {
+                        server.ListenAndSendResponse();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    mStartServerButton.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mStartServerButton.setEnabled(true);
+                        }
+                    });
+                });
             }
         });
 
-        int PERMISSION_ALL = 1;
-        String[] PERMISSIONS = {
-                android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                android.Manifest.permission.READ_EXTERNAL_STORAGE,
-                android.Manifest.permission.RECORD_AUDIO,
-        };
-
-        if (!hasPermissions(this, PERMISSIONS)) {
-            ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_ALL);
-        }
-    }
-
-    public static boolean hasPermissions(Context context, String... permissions) {
-        if (context != null && permissions != null) {
-            for (String permission : permissions) {
-                if (ActivityCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-                    return false;
-                }
+        mSyncClientButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mSyncClientButton.setEnabled(false);
+                CompletableFuture.runAsync(() ->
+                {
+                    Client client = new Client(v.getContext());
+                    try {
+                        client.sendAndWaitForResponse();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                        e.printStackTrace();
+                    }
+                    mSyncClientButton.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            mSyncClientButton.setEnabled(true);
+                        }
+                    });
+                });
             }
-        }
-        return true;
-    }
-
-    public void openActivity2() {
-        Intent intent = new Intent(this, NoiseMeter.class);
-        startActivity(intent);
+        });
     }
 }

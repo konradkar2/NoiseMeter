@@ -33,7 +33,7 @@ public class NoiseMeter extends Activity {
         ContextWrapper cw = new ContextWrapper(getApplicationContext());
         String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
 
-        long pollingRateMs = 5;
+        long pollingRateMs = 1;
         int thresholdDb = 60;
         soundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs);
         soundDetector.executeOnThresholdReached(() ->
