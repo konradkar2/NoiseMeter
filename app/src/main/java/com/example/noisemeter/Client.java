@@ -4,7 +4,9 @@ import static android.content.Context.WIFI_SERVICE;
 import android.content.Context;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiManager;
-import android.util.Log;
+
+import com.example.noisemeter.messages.GetTimestampReq;
+import com.example.noisemeter.messages.TimeStampMsg;
 
 import java.io.*;
 import java.math.BigInteger;
@@ -31,25 +33,24 @@ public class Client {
 
         OutputStream outputStream = socket.getOutputStream();
         ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-        RtpMsg req = new RtpMsg();
+
+        GetTimestampReq req = new GetTimestampReq();
 
         logger.i("Sending request");
-
-        long tSentAt = System.currentTimeMillis();
         objectOutputStream.writeObject(req);
-
+        long tSentAt = System.currentTimeMillis();
         logger.i("waiting for response...");
 
         InputStream inputStream = socket.getInputStream(); //this blocks
         long tGotResponseAt = System.currentTimeMillis();
 
         ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-        RtpMsg response = (RtpMsg)objectInputStream.readObject();
+        TimeStampMsg response = (TimeStampMsg)objectInputStream.readObject();
 
         socket.close();
         logger.i("Received message");
         logger.i("Sent request at: " + tSentAt);
-        logger.i("Server's timestamp: " + response.t);
+        logger.i("Server's timestamp: " + response.timestamp);
         logger.i("Got response at: " + tGotResponseAt);
 
 
@@ -57,7 +58,7 @@ public class Client {
         logger.i("Calculated rtt: " + rtt + " [ms] ");
 
 
-        double tOffset = tSentAt - response.t - rtt;
+        double tOffset = tSentAt - response.timestamp - rtt;
         logger.i("Our offset to server is: " + tOffset + " [ms] ");
 
     }

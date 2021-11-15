@@ -1,4 +1,7 @@
 package com.example.noisemeter;
+import com.example.noisemeter.messages.GetTimestampReq;
+import com.example.noisemeter.messages.TimeStampMsg;
+
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -16,16 +19,17 @@ public class Server {
 
             InputStream inputStream = socket.getInputStream();
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-            RtpMsg msg = (RtpMsg) objectInputStream.readObject();
+            GetTimestampReq request = (GetTimestampReq) objectInputStream.readObject();
 
 
             logger.i("Sending response...");
             OutputStream outputStream = socket.getOutputStream();
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+            TimeStampMsg response =  new TimeStampMsg();
+            response.timestamp = System.currentTimeMillis();
 
-            msg.t = System.currentTimeMillis();
-            objectOutputStream.writeObject(msg);
-            logger.i("Sent " + msg.t);
+            objectOutputStream.writeObject(response);
+            logger.i("Sent " + response.timestamp);
         }
 
 
