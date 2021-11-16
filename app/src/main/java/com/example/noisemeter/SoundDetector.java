@@ -8,34 +8,50 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.FutureTask;
 
 public class SoundDetector {
-    MediaRecorder mRecorder;
-    String mFilepath;
-    int mThresholdDb;
-    long mPollingIntervalMs;
+    private MediaRecorder mRecorder;
+    private String mFilepath;
+    private int mThresholdDb;
+    private long mPollingIntervalMs;
+    private Boolean mEnabled = false;
+    private Runnable mWork = null;
+    private final Object lock = new Object();
 
     public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
         mFilepath = filepath;
         mThresholdDb = thresholdDb;
         mPollingIntervalMs = pollingIntervalMs;
-    }
-
-    public void executeOnThresholdReached(Runnable runnable) {
         initializeRecorder();
         startRecording();
-        waitForThresholdAndExecute(runnable, () -> {
-            mRecorder.stop();
-            mRecorder.release();
-        });
+        mainLoop();
     }
 
-    private void waitForThresholdAndExecute(Runnable work, Runnable cleanup) {
-        CompletableFuture.runAsync(() ->
+    public void enable() {
+        synchronized (lock) {
+            mEnabled = true;
+        }
+    }
+
+    public void disable() {
+        synchronized (lock) {
+            mEnabled = false;
+        }
+    }
+
+    public void setWork(Runnable work) {
+        synchronized (lock) {
+            mWork = work;
+        }
+    }
+
+    private void mainLoop() {
+        new Thread(() ->
         {
             while (true) {
-
-                if (getAmplitudeDb() > mThresholdDb) {
-                    work.run();
-                    break;
+                synchronized (lock) {
+                    if (mEnabled && mWork != null)
+                        if (getAmplitudeDb() > mThresholdDb) {
+                            mWork.run();
+                        }
                 }
                 try {
                     Thread.sleep(mPollingIntervalMs);
@@ -43,8 +59,7 @@ public class SoundDetector {
                     e.printStackTrace();
                 }
             }
-            cleanup.run();
-        });
+        }).start();
 
     }
 
