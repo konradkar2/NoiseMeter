@@ -10,8 +10,10 @@ public class Server {
     public void ListenAndSendResponse() throws IOException, ClassNotFoundException {
         ServerSocket ss = new ServerSocket(7777);
         Logger logger = Logger.instance();
-        Socket socket = ss.accept();
         logger.i("ServerSocket awaiting connections...");
+        Socket socket = ss.accept();
+        socket.setTcpNoDelay(true);
+
         logger.i("Connection from " + socket + "!");
         for(int i = 0; i < 1000 ; i++)
         {

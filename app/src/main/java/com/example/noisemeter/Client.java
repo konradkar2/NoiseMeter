@@ -1,11 +1,8 @@
 package com.example.noisemeter;
 import static android.content.Context.WIFI_SERVICE;
-import static android.media.AudioManager.STREAM_MUSIC;
-import static android.media.ToneGenerator.TONE_PROP_BEEP;
 
 import android.content.Context;
 import android.content.ContextWrapper;
-import android.media.ToneGenerator;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiManager;
 
@@ -24,55 +21,55 @@ import java.util.ArrayList;
 
 public class Client {
     Context mContext;
-    Socket socket;
-    Logger logger;
-    SoundDetector soundDetector;
-    public Client(Context context) throws Exception {
-        logger = Logger.instance();
+    Socket mSocket;
+    Logger mLogger;
+    SoundDetector mSoundDetector;
+    public Client(Context context, SoundDetector soundDetector) throws Exception {
+        mLogger = Logger.instance();
         mContext = context;
+        this.mSoundDetector = soundDetector;
         String ipAddress = getHotspotAdress();
         if(ipAddress.isEmpty())
         {
             throw new Exception("failed to get addresss");
         }
-        socket = new Socket();
-        socket.connect(new InetSocketAddress(ipAddress, 7777), 1000);
-        logger.i("Connected to" + ipAddress);
+        mSocket = new Socket();
+        mSocket.setTcpNoDelay(true);
+        mSocket.connect(new InetSocketAddress(ipAddress, 7777), 1000);
+        mLogger.i("Connected to" + ipAddress);
 
-        logger.i("Initializing soundetector...");
-        ContextWrapper cw = new ContextWrapper(mContext);
-        String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
-        long pollingRateMs = 1;
-        int thresholdDb = 40;
-//        soundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs,new Runnable() {
-//            @Override
-//            public void run() {
-//                logger.i("Got something in detector");
-//                soundDetector.disable();
-//            }
-//        });
+        mLogger.i("setting work to sound detector...");
+        mSoundDetector.setWork(new Runnable() {
+            @Override
+            public void run() {
+                mLogger.i("Got something in detector");
+                mSoundDetector.disable();
+            }
+        });
 
     }
     public void sendAndWaitForResponse() throws IOException, ClassNotFoundException {
-        OutputStream outputStream = socket.getOutputStream();
-        InputStream inputStream = socket.getInputStream();
+        OutputStream outputStream = mSocket.getOutputStream();
+        InputStream inputStream = mSocket.getInputStream();
 
         ArrayList tsSentAt = new ArrayList<Long>();
         ArrayList tsGotResponseAt = new ArrayList<Long>();
         ArrayList tsResponseTimestamp = new ArrayList<Long>();
 
-        for (int i = 0; i < 10; i++) {
-            logger.i("Sending request");
+        for (int i = 0; i < 30; i++) {
+            //logger.i("Sending request");
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-            tsSentAt.add(System.currentTimeMillis());
+            long tSentAt = System.currentTimeMillis();
             objectOutputStream.writeObject(new GetTimestampReq());
 
 
-            logger.i("waiting for response...");
+            //logger.i("waiting for response...");
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream); //this blocks
-            tsGotResponseAt.add(System.currentTimeMillis());
+            long tGotResponseAt = System.currentTimeMillis();
             TimeStampMsg response = (TimeStampMsg) objectInputStream.readObject();
             tsResponseTimestamp.add(response.timestamp);
+            tsSentAt.add(tSentAt);
+            tsGotResponseAt.add(tGotResponseAt);
         }
         long rttDiffSum = 0;
         long offsetSum = 0;
@@ -85,30 +82,30 @@ public class Client {
         {
             offsetSum =  offsetSum + ((Long)tsResponseTimestamp.get(i)).longValue() - ((Long)tsSentAt.get(i)).longValue();
         }
-        double rttAvg = rttDiffSum/(double)size;
+        double rttAvg = rttDiffSum/(double)size*2;
         double offsetAvg = (offsetSum/(double)size) - rttAvg;
-        logger.i("Calculated rttAvg: " + rttAvg + " [ms] ");
-        logger.i("Our avg offset to server is: " + offsetAvg + " [ms] ");
+        mLogger.i("Calculated rttAvg: " + rttAvg + " [ms] ");
+        mLogger.i("Our avg offset to server is: " + offsetAvg + " [ms] ");
 
         for (int i = 0; i < 3; i++)
         {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 
             PlayAudioReq req = new PlayAudioReq();
-            logger.i("Sending playAudioRequest");
+            mLogger.i("Sending playAudioRequest");
             objectOutputStream.writeObject(req);
-            //soundDetector.enable();
+            mSoundDetector.enable();
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
             long tSentAt = System.currentTimeMillis();
-            logger.i("waiting for response...");
+            mLogger.i("waiting for response...");
 
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
             TimeStampMsg response = (TimeStampMsg) objectInputStream.readObject();
-            //soundDetector.disable();
+            mSoundDetector.disable();
             long tGotResponseAt = System.currentTimeMillis();
         }
 

@@ -12,44 +12,45 @@ public class SoundDetector {
     private String mFilepath;
     private int mThresholdDb;
     private long mPollingIntervalMs;
-
-    private Boolean enabled = false;
+    private Boolean mEnabled = false;
+    private Runnable mWork = null;
     private final Object lock = new Object();
 
-    public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs, Runnable runnable) {
+    public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
         mFilepath = filepath;
         mThresholdDb = thresholdDb;
         mPollingIntervalMs = pollingIntervalMs;
-
-        executeOnThresholdReached(runnable);
+        initializeRecorder();
+        startRecording();
+        mainLoop();
     }
 
     public void enable() {
         synchronized (lock) {
-            enabled = true;
+            mEnabled = true;
         }
     }
 
     public void disable() {
         synchronized (lock) {
-            enabled = false;
+            mEnabled = false;
         }
     }
 
-    private void executeOnThresholdReached(Runnable runnable) {
-        initializeRecorder();
-        startRecording();
-        waitForThresholdAndExecute(runnable);
+    public void setWork(Runnable work) {
+        synchronized (lock) {
+            mWork = work;
+        }
     }
 
-    private void waitForThresholdAndExecute(Runnable work) {
-        CompletableFuture.runAsync(() ->
+    private void mainLoop() {
+        new Thread(() ->
         {
             while (true) {
                 synchronized (lock) {
-                    if (enabled)
+                    if (mEnabled && mWork != null)
                         if (getAmplitudeDb() > mThresholdDb) {
-                            work.run();
+                            mWork.run();
                         }
                 }
                 try {
@@ -58,7 +59,7 @@ public class SoundDetector {
                     e.printStackTrace();
                 }
             }
-        });
+        }).start();
 
     }
 
