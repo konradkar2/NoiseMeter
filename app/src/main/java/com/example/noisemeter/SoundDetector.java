@@ -8,34 +8,49 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.FutureTask;
 
 public class SoundDetector {
-    MediaRecorder mRecorder;
-    String mFilepath;
-    int mThresholdDb;
-    long mPollingIntervalMs;
+    private MediaRecorder mRecorder;
+    private String mFilepath;
+    private int mThresholdDb;
+    private long mPollingIntervalMs;
 
-    public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
+    private Boolean enabled = false;
+    private final Object lock = new Object();
+
+    public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs, Runnable runnable) {
         mFilepath = filepath;
         mThresholdDb = thresholdDb;
         mPollingIntervalMs = pollingIntervalMs;
+
+        executeOnThresholdReached(runnable);
     }
 
-    public void executeOnThresholdReached(Runnable runnable) {
+    public void enable() {
+        synchronized (lock) {
+            enabled = true;
+        }
+    }
+
+    public void disable() {
+        synchronized (lock) {
+            enabled = false;
+        }
+    }
+
+    private void executeOnThresholdReached(Runnable runnable) {
         initializeRecorder();
         startRecording();
-        waitForThresholdAndExecute(runnable, () -> {
-            mRecorder.stop();
-            mRecorder.release();
-        });
+        waitForThresholdAndExecute(runnable);
     }
 
-    private void waitForThresholdAndExecute(Runnable work, Runnable cleanup) {
+    private void waitForThresholdAndExecute(Runnable work) {
         CompletableFuture.runAsync(() ->
         {
             while (true) {
-
-                if (getAmplitudeDb() > mThresholdDb) {
-                    work.run();
-                    break;
+                synchronized (lock) {
+                    if (enabled)
+                        if (getAmplitudeDb() > mThresholdDb) {
+                            work.run();
+                        }
                 }
                 try {
                     Thread.sleep(mPollingIntervalMs);
@@ -43,7 +58,6 @@ public class SoundDetector {
                     e.printStackTrace();
                 }
             }
-            cleanup.run();
         });
 
     }

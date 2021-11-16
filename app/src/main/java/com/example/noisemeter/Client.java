@@ -1,65 +1,116 @@
 package com.example.noisemeter;
 import static android.content.Context.WIFI_SERVICE;
+import static android.media.AudioManager.STREAM_MUSIC;
+import static android.media.ToneGenerator.TONE_PROP_BEEP;
 
 import android.content.Context;
+import android.content.ContextWrapper;
+import android.media.ToneGenerator;
 import android.net.DhcpInfo;
 import android.net.wifi.WifiManager;
 
 import com.example.noisemeter.messages.GetTimestampReq;
+import com.example.noisemeter.messages.PlayAudioReq;
 import com.example.noisemeter.messages.TimeStampMsg;
 
 import java.io.*;
 import java.math.BigInteger;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 
 public class Client {
     Context mContext;
-    public Client(Context context)
-    {
+    Socket socket;
+    Logger logger;
+    SoundDetector soundDetector;
+    public Client(Context context) throws Exception {
+        logger = Logger.instance();
         mContext = context;
-    }
-    public void sendAndWaitForResponse() throws IOException, ClassNotFoundException {
-        Logger logger = Logger.instance();
         String ipAddress = getHotspotAdress();
         if(ipAddress.isEmpty())
         {
-            return;
+            throw new Exception("failed to get addresss");
         }
-        Socket socket = new Socket(ipAddress, 7777);
+        socket = new Socket();
+        socket.connect(new InetSocketAddress(ipAddress, 7777), 1000);
         logger.i("Connected to" + ipAddress);
 
+        logger.i("Initializing soundetector...");
+        ContextWrapper cw = new ContextWrapper(mContext);
+        String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
+        long pollingRateMs = 1;
+        int thresholdDb = 40;
+//        soundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs,new Runnable() {
+//            @Override
+//            public void run() {
+//                logger.i("Got something in detector");
+//                soundDetector.disable();
+//            }
+//        });
+
+    }
+    public void sendAndWaitForResponse() throws IOException, ClassNotFoundException {
         OutputStream outputStream = socket.getOutputStream();
-        ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+        InputStream inputStream = socket.getInputStream();
 
-        GetTimestampReq req = new GetTimestampReq();
+        ArrayList tsSentAt = new ArrayList<Long>();
+        ArrayList tsGotResponseAt = new ArrayList<Long>();
+        ArrayList tsResponseTimestamp = new ArrayList<Long>();
 
-        logger.i("Sending request");
-        objectOutputStream.writeObject(req);
-        long tSentAt = System.currentTimeMillis();
-        logger.i("waiting for response...");
-
-        InputStream inputStream = socket.getInputStream(); //this blocks
-        long tGotResponseAt = System.currentTimeMillis();
-
-        ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-        TimeStampMsg response = (TimeStampMsg)objectInputStream.readObject();
-
-        socket.close();
-        logger.i("Received message");
-        logger.i("Sent request at: " + tSentAt);
-        logger.i("Server's timestamp: " + response.timestamp);
-        logger.i("Got response at: " + tGotResponseAt);
+        for (int i = 0; i < 10; i++) {
+            logger.i("Sending request");
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+            tsSentAt.add(System.currentTimeMillis());
+            objectOutputStream.writeObject(new GetTimestampReq());
 
 
-        double rtt = (tGotResponseAt - tSentAt)/2;
-        logger.i("Calculated rtt: " + rtt + " [ms] ");
+            logger.i("waiting for response...");
+            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream); //this blocks
+            tsGotResponseAt.add(System.currentTimeMillis());
+            TimeStampMsg response = (TimeStampMsg) objectInputStream.readObject();
+            tsResponseTimestamp.add(response.timestamp);
+        }
+        long rttDiffSum = 0;
+        long offsetSum = 0;
+        long size = tsSentAt.size();
+        for(int i = 0 ; i< size;i++)
+        {
+            rttDiffSum = rttDiffSum + ((Long)tsGotResponseAt.get(i)).longValue() - ((Long)tsSentAt.get(i)).longValue();
+        }
+        for(int i = 0 ; i< size;i++)
+        {
+            offsetSum =  offsetSum + ((Long)tsResponseTimestamp.get(i)).longValue() - ((Long)tsSentAt.get(i)).longValue();
+        }
+        double rttAvg = rttDiffSum/(double)size;
+        double offsetAvg = (offsetSum/(double)size) - rttAvg;
+        logger.i("Calculated rttAvg: " + rttAvg + " [ms] ");
+        logger.i("Our avg offset to server is: " + offsetAvg + " [ms] ");
 
+        for (int i = 0; i < 3; i++)
+        {
+            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
 
-        double tOffset = tSentAt - response.timestamp - rtt;
-        logger.i("Our offset to server is: " + tOffset + " [ms] ");
+            PlayAudioReq req = new PlayAudioReq();
+            logger.i("Sending playAudioRequest");
+            objectOutputStream.writeObject(req);
+            //soundDetector.enable();
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            long tSentAt = System.currentTimeMillis();
+            logger.i("waiting for response...");
+
+            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
+            TimeStampMsg response = (TimeStampMsg) objectInputStream.readObject();
+            //soundDetector.disable();
+            long tGotResponseAt = System.currentTimeMillis();
+        }
 
     }
 

@@ -17,7 +17,7 @@ public class MainActivity extends AppCompatActivity {
     LogStoreTextView logStoreTextView;
     Button mStartServerButton;
     Button mSyncClientButton;
-
+    Client client;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -60,7 +60,14 @@ public class MainActivity extends AppCompatActivity {
                 mSyncClientButton.setEnabled(false);
                 CompletableFuture.runAsync(() ->
                 {
-                    Client client = new Client(v.getContext());
+
+                    try {
+                        if(client == null) {
+                            client = new Client(v.getContext());
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                     try {
                         client.sendAndWaitForResponse();
                     } catch (IOException e) {
