@@ -1,6 +1,5 @@
 package com.example.noisemeter;
-import com.example.noisemeter.messages.GetTimestampReq;
-import com.example.noisemeter.messages.TimeStampMsg;
+import com.example.noisemeter.messages.TimeStamp;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -19,7 +18,8 @@ public class Server {
         {
             InputStream inputStream = socket.getInputStream();
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);//this blocks
-            long requestedAt = System.currentTimeMillis();
+
+            TimeStamp requestedAt = new TimeStamp();
             Object request =  objectInputStream.readObject();
             Serializable serializable =  MsgHandler.handleMsg(request,requestedAt);
             if(serializable != null)
