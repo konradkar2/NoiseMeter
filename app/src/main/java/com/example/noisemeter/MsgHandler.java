@@ -27,7 +27,7 @@ public class MsgHandler {
             toneGenerator.startTone(TONE_DTMF_1,playForMs);
             try {
                 //simulate blocking
-                Thread.sleep(150);
+                Thread.sleep(playForMs);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
