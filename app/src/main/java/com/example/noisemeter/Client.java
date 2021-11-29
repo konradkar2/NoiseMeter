@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Client {
@@ -73,20 +74,43 @@ public class Client {
             tsResponseTimestamp.add(response);
         }
         long rttDiffSum = 0;
+        List<Long> rttDiffList = new ArrayList<>();
         long offsetSum = 0;
+        List<Long> offsetList = new ArrayList<>();
         long size = tsSentAt.size();
+
         for(int i = 0 ; i< size;i++)
         {
-            rttDiffSum = rttDiffSum + tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
+            long val = tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
+            rttDiffSum = rttDiffSum + val;
+            rttDiffList.add(val);
         }
+
         for(int i = 0 ; i< size;i++)
         {
-            offsetSum =  offsetSum + tsSentAt.get(i).get() -tsResponseTimestamp.get(i).get();
+            long val = tsResponseTimestamp.get(i).get() - tsSentAt.get(i).get();
+            offsetSum =  offsetSum + val;
+            offsetList.add(val);
         }
-        double rttAvg = rttDiffSum/(double)size*2;
-        double clockOffsetAvg = (offsetSum/(double)size) - rttAvg;
+
+
+        Collections.sort(rttDiffList);
+        Collections.sort(offsetList);
+
+//        double rttAvg = rttDiffSum/(double)size*2;
+//        double clockOffsetAvg = (offsetSum/(double)size) - rttAvg;
+
+        double rttAvg = (float) (rttDiffList.get(14) + rttDiffList.get(15))/4;
+        double clockOffsetAvg = (float) ((offsetList.get(14) + offsetList.get(15))/2) - rttAvg;
+
+
         mLogger.i("Calculated rttAvg: " + rttAvg + " [ms] ");
         mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
+//        mLogger.i("rttDiffList: " + rttDiffList);
+//        mLogger.i("offsetList: " + offsetList);
+//        mLogger.i("newRttAvg: " + newRttAvg);
+//        mLogger.i("newOffset: " + newOffset);
+
 
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
