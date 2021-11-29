@@ -73,45 +73,22 @@ public class Client {
             TimeStamp response = (TimeStamp) objectInputStream.readObject();
             tsResponseTimestamp.add(response);
         }
-        long rttDiffSum = 0;
-        List<Long> rttDiffList = new ArrayList<>();
-        long offsetSum = 0;
-        List<Long> offsetList = new ArrayList<>();
+
+        List<Double> offsetList = new ArrayList<>();
         long size = tsSentAt.size();
 
         for(int i = 0 ; i< size;i++)
         {
-            long val = tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
-            rttDiffSum = rttDiffSum + val;
-            rttDiffList.add(val);
+            double rtt = tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
+            rtt = rtt/2.0;
+            double clockOffset = tsResponseTimestamp.get(i).get() - tsSentAt.get(i).get() + rtt;
+            offsetList.add(clockOffset);
         }
-
-        for(int i = 0 ; i< size;i++)
-        {
-            long val = tsResponseTimestamp.get(i).get() - tsSentAt.get(i).get();
-            offsetSum =  offsetSum + val;
-            offsetList.add(val);
-        }
-
-
-        Collections.sort(rttDiffList);
         Collections.sort(offsetList);
 
-//        double rttAvg = rttDiffSum/(double)size*2;
-//        double clockOffsetAvg = (offsetSum/(double)size) - rttAvg;
+        double clockOffsetAvg = ((offsetList.get(14) + offsetList.get(15))/2);
 
-        double rttAvg = (float) (rttDiffList.get(14) + rttDiffList.get(15))/4;
-        double clockOffsetAvg = (float) ((offsetList.get(14) + offsetList.get(15))/2) - rttAvg;
-
-
-        mLogger.i("Calculated rttAvg: " + rttAvg + " [ms] ");
         mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
-//        mLogger.i("rttDiffList: " + rttDiffList);
-//        mLogger.i("offsetList: " + offsetList);
-//        mLogger.i("newRttAvg: " + newRttAvg);
-//        mLogger.i("newOffset: " + newOffset);
-
-
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
         {
@@ -145,7 +122,7 @@ public class Client {
                 long rawOffset = tsSoundDetectedAt.get(i).get() - tsPlayedAt.get(i).get();
                 mLogger.i("Probe #" + i);
                 mLogger.e("Raw delay: " + rawOffset);
-                double offset = (double) rawOffset - clockOffsetAvg;
+                double offset = (double) rawOffset + clockOffsetAvg;
                 mLogger.e("delay: " + offset);
             }
         }
