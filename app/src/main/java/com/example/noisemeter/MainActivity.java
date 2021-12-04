@@ -4,6 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ContextWrapper;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ScrollView;
@@ -19,6 +21,7 @@ import java.util.concurrent.Executors;
 public class MainActivity extends AppCompatActivity {
     TextView mTextView;
     LogStoreTextView logStoreTextView;
+    ScrollView mScrollView;
     Button mStartServerButton;
     Button mSyncClientButton;
     Client client;
@@ -37,9 +40,31 @@ public class MainActivity extends AppCompatActivity {
 
         ContextWrapper cw = new ContextWrapper(this);
         String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
-        long pollingRateMs = 1;
-        int thresholdDb = 33;
+        long pollingRateMs = 10;
+        int thresholdDb = 60;
         mSoundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs);
+
+        mScrollView = (ScrollView) findViewById(R.id.scrollViewLog);
+
+        mTextView.addTextChangedListener(new TextWatcher() {
+
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable arg0) {
+                mScrollView.fullScroll(ScrollView.FOCUS_DOWN);
+                // you can add a toast or whatever you want here
+            }
+
+        });
 
         mStartServerButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -52,9 +77,7 @@ public class MainActivity extends AppCompatActivity {
                         Server server = new Server();
                         try {
                             server.ListenAndSendResponse();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        } catch (ClassNotFoundException e) {
+                        } catch (IOException | ClassNotFoundException | InterruptedException e) {
                             e.printStackTrace();
                         }
                         mStartServerButton.post(new Runnable() {
@@ -88,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
                         } catch (IOException e) {
                             e.printStackTrace();
                         } catch (ClassNotFoundException e) {
+                            e.printStackTrace();
+                        } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
                         mSyncClientButton.post(new Runnable() {

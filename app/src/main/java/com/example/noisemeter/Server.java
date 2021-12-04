@@ -6,15 +6,18 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server {
-    public void ListenAndSendResponse() throws IOException, ClassNotFoundException {
+    public void ListenAndSendResponse() throws IOException, ClassNotFoundException, InterruptedException {
         ServerSocket ss = new ServerSocket(7777);
         Logger logger = Logger.instance();
         logger.i("ServerSocket awaiting connections...");
+
         Socket socket = ss.accept();
         socket.setTcpNoDelay(true);
+        socket.setTrafficClass(0x10);
+        logger.i("traffic class: " + socket.getTrafficClass());
 
         logger.i("Connection from " + socket + "!");
-        for(int i = 0; i < 1000 ; i++)
+        while(true)
         {
             InputStream inputStream = socket.getInputStream();
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);//this blocks
@@ -34,11 +37,6 @@ public class Server {
                 logger.i("Not sending response");
             }
         }
-
-
-        logger.i("Closing sockets.");
-        ss.close();
-        socket.close();
     }
 
 }

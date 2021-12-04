@@ -10,6 +10,7 @@ import com.example.noisemeter.messages.PlayAudioReq;
 import com.example.noisemeter.messages.TimeStamp;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -37,6 +38,7 @@ public class Client {
         }
         mSocket = new Socket();
         mSocket.setTcpNoDelay(true);
+        mSocket.setTrafficClass(0x10);
         mSocket.connect(new InetSocketAddress(ipAddress, 7777), 1000);
         mLogger.i("Connected to" + ipAddress);
 
@@ -51,7 +53,7 @@ public class Client {
         });
 
     }
-    public void sendAndWaitForResponse() throws IOException, ClassNotFoundException {
+    public void sendAndWaitForResponse() throws IOException, ClassNotFoundException, InterruptedException {
         tsSoundDetectedAt = new ArrayList<TimeStamp>();
         OutputStream outputStream = mSocket.getOutputStream();
         InputStream inputStream = mSocket.getInputStream();
@@ -72,6 +74,8 @@ public class Client {
             tsGotResponseAt.add(new TimeStamp());
             TimeStamp response = (TimeStamp) objectInputStream.readObject();
             tsResponseTimestamp.add(response);
+
+            Thread.sleep(100);
         }
 
         List<Double> offsetList = new ArrayList<>();
@@ -81,15 +85,18 @@ public class Client {
         {
             double rtt = tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
             rtt = rtt/2.0;
+            mLogger.i("rtt:" + String.valueOf(rtt));
             double clockOffset = tsResponseTimestamp.get(i).get() - tsSentAt.get(i).get() + rtt;
             offsetList.add(clockOffset);
         }
-        Collections.sort(offsetList);
 
+        Collections.sort(offsetList);
+        mLogger.i("offset list"+offsetList.toString());
         double clockOffsetAvg = ((offsetList.get(14) + offsetList.get(15))/2);
 
         mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
+        List<TimeStamp> tsSoundSentAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
         {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
@@ -98,11 +105,14 @@ public class Client {
 
             mLogger.i("Sending playAudioRequest");
             objectOutputStream.writeObject(req);
+            tsSoundSentAt.add(new TimeStamp());
             mSoundDetector.enable();
-            long tSentAt = System.currentTimeMillis();
+//            long tSentAt = System.currentTimeMillis();
+
             mLogger.i("waiting for response...");
+
             try {
-                Thread.sleep(500);
+                Thread.sleep(2000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -111,6 +121,7 @@ public class Client {
             tsPlayedAt.add(tPlayedAt);
             mSoundDetector.disable();
         }
+
         if(tsPlayedAt.size() != tsSoundDetectedAt.size())
         {
             mLogger.e("Not all signals were detected...");
@@ -120,12 +131,16 @@ public class Client {
             for(int i = 0; i<tsSoundDetectedAt.size(); i++)
             {
                 long rawOffset = tsSoundDetectedAt.get(i).get() - tsPlayedAt.get(i).get();
+                long rtt = tsPlayedAt.get(i).get() - tsSoundSentAt.get(i).get() - (long) clockOffsetAvg;
+                mLogger.i("Rtt: " + rtt);
                 mLogger.i("Probe #" + i);
                 mLogger.e("Raw delay: " + rawOffset);
                 double offset = (double) rawOffset + clockOffsetAvg;
                 mLogger.e("delay: " + offset);
             }
         }
+
+        boolean stop = true;
 
 
     }

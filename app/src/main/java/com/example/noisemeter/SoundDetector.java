@@ -27,6 +27,7 @@ public class SoundDetector {
 
     public void enable() {
         synchronized (lock) {
+            getAmplitudeDb();
             mEnabled = true;
         }
     }

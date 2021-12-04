@@ -13,16 +13,17 @@ import com.example.noisemeter.messages.TimeStamp;
 import java.io.Serializable;
 
 public class MsgHandler {
-    public static Serializable handleMsg(Object obj, TimeStamp requestedAt)
-    {
+    public static Serializable handleMsg(Object obj, TimeStamp requestedAt) throws InterruptedException {
         if(obj instanceof GetTimestampReq){
             return requestedAt;
         }
         if(obj instanceof PlayAudioReq){
-            ToneGenerator toneGenerator = new ToneGenerator(STREAM_MUSIC,100);
             TimeStamp response =  new TimeStamp();
+            ToneGenerator toneGenerator = new ToneGenerator(STREAM_MUSIC,100);
+
 
             int playForMs = 200;
+//            Thread.sleep(1000);
             //this runs on new thread, to be replaced
             toneGenerator.startTone(TONE_DTMF_1,playForMs);
             try {
