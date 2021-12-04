@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Client {
@@ -72,22 +73,22 @@ public class Client {
             TimeStamp response = (TimeStamp) objectInputStream.readObject();
             tsResponseTimestamp.add(response);
         }
-        long rttDiffSum = 0;
-        long offsetSum = 0;
-        long size = tsSentAt.size();
-        for(int i = 0 ; i< size;i++)
-        {
-            rttDiffSum = rttDiffSum + tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
-        }
-        for(int i = 0 ; i< size;i++)
-        {
-            offsetSum =  offsetSum + tsSentAt.get(i).get() -tsResponseTimestamp.get(i).get();
-        }
-        double rttAvg = rttDiffSum/(double)size*2;
-        double clockOffsetAvg = (offsetSum/(double)size) - rttAvg;
-        mLogger.i("Calculated rttAvg: " + rttAvg + " [ms] ");
-        mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
 
+        List<Double> offsetList = new ArrayList<>();
+        long size = tsSentAt.size();
+
+        for(int i = 0 ; i< size;i++)
+        {
+            double rtt = tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
+            rtt = rtt/2.0;
+            double clockOffset = tsResponseTimestamp.get(i).get() - tsSentAt.get(i).get() + rtt;
+            offsetList.add(clockOffset);
+        }
+        Collections.sort(offsetList);
+
+        double clockOffsetAvg = ((offsetList.get(14) + offsetList.get(15))/2);
+
+        mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
         {
@@ -121,7 +122,7 @@ public class Client {
                 long rawOffset = tsSoundDetectedAt.get(i).get() - tsPlayedAt.get(i).get();
                 mLogger.i("Probe #" + i);
                 mLogger.e("Raw delay: " + rawOffset);
-                double offset = (double) rawOffset - clockOffsetAvg;
+                double offset = (double) rawOffset + clockOffsetAvg;
                 mLogger.e("delay: " + offset);
             }
         }
