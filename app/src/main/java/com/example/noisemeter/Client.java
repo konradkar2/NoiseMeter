@@ -10,7 +10,6 @@ import com.example.noisemeter.messages.PlayAudioReq;
 import com.example.noisemeter.messages.TimeStamp;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -27,6 +26,9 @@ public class Client {
     Logger mLogger;
     SoundDetector mSoundDetector;
     List<TimeStamp> tsSoundDetectedAt;
+    Object lock = new Object();
+    boolean canAddSoundDetectedAtTs = true;
+
     public Client(Context context, SoundDetector soundDetector) throws Exception {
         mLogger = Logger.instance();
         mContext = context;
@@ -44,12 +46,27 @@ public class Client {
         mLogger.i("Connected to" + ipAddress);
 
         mLogger.i("setting work to sound detector...");
-        mSoundDetector.setWork(new Runnable() {
+        mSoundDetector.setHandler(new IHandleAmplitude() {
             @Override
-            public void run() {
-                mLogger.i("Got something in detector");
-                tsSoundDetectedAt.add(new TimeStamp());
-                mSoundDetector.disable();
+            public void handle(double amplitude, boolean thresholdReached) {
+                synchronized (lock)
+                {
+                    if(thresholdReached)
+                    {
+                        if(canAddSoundDetectedAtTs)
+                        {
+                            tsSoundDetectedAt.add(new TimeStamp());
+                            canAddSoundDetectedAtTs = false;
+                        }
+                    }
+                    else
+                    {
+                        canAddSoundDetectedAtTs = true;
+                        mSoundDetector.disable();
+                        lock.notify();
+                    }
+                }
+
             }
         });
 
@@ -98,25 +115,20 @@ public class Client {
         for (int i = 0; i < 5; i++)
         {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-
             PlayAudioReq req = new PlayAudioReq();
-
             mLogger.i("Sending playAudioRequest");
             objectOutputStream.writeObject(req);
+
             mSoundDetector.enable();
-//            long tSentAt = System.currentTimeMillis();
-
             mLogger.i("waiting for response...");
-
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
             TimeStamp tPlayedAt = (TimeStamp) objectInputStream.readObject();
             tsPlayedAt.add(tPlayedAt);
-            mSoundDetector.disable();
+            synchronized (lock)
+            {
+                wait();
+            }
+
         }
 
         if(tsPlayedAt.size() != tsSoundDetectedAt.size())

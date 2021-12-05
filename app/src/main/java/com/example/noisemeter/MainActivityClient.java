@@ -37,8 +37,8 @@ public class MainActivityClient extends AppCompatActivity {
 
         ContextWrapper cw = new ContextWrapper(this);
         String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
-        long pollingRateMs = 1;
-        int thresholdDb = 33;
+        long pollingRateMs = 5;
+        int thresholdDb = 50;
        
         mSoundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs);
 

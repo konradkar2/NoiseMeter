@@ -1,11 +1,8 @@
 package com.example.noisemeter;
 
-import android.content.ContextWrapper;
 import android.media.MediaRecorder;
 
 import java.io.File;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.FutureTask;
 
 public class SoundDetector {
     private MediaRecorder mRecorder;
@@ -13,7 +10,7 @@ public class SoundDetector {
     private int mThresholdDb;
     private long mPollingIntervalMs;
     private Boolean mEnabled = false;
-    private Runnable mWork = null;
+    private IHandleAmplitude mHandler = null;
     private final Object lock = new Object();
 
     public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
@@ -38,9 +35,9 @@ public class SoundDetector {
         }
     }
 
-    public void setWork(Runnable work) {
+    public void setHandler(IHandleAmplitude handler) {
         synchronized (lock) {
-            mWork = work;
+            mHandler = handler;
         }
     }
 
@@ -49,10 +46,12 @@ public class SoundDetector {
         {
             while (true) {
                 synchronized (lock) {
-                    if (mEnabled && mWork != null) {
-                        if (getAmplitudeDb() > mThresholdDb) {
-                            mWork.run();
-                        }
+                    if (mEnabled && mHandler != null) {
+                        double amplitudeDb = getAmplitudeDb();
+                        if (amplitudeDb > mThresholdDb)
+                            mHandler.handle(amplitudeDb,true);
+                        else
+                            mHandler.handle(amplitudeDb,false);
                     }
                 }
                 try {
