@@ -10,11 +10,10 @@ import com.example.noisemeter.messages.PlayAudioReq;
 import com.example.noisemeter.messages.TimeStamp;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.math.BigInteger;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.ByteOrder;
 import java.util.ArrayList;
@@ -23,7 +22,8 @@ import java.util.List;
 
 public class Client {
     Context mContext;
-    Socket mSocket;
+    DatagramSocket mSocket;
+    InetSocketAddress mServerAddress;
     Logger mLogger;
     SoundDetector mSoundDetector;
     List<TimeStamp> tsSoundDetectedAt;
@@ -36,12 +36,10 @@ public class Client {
         {
             throw new Exception("failed to get addresss");
         }
-        mSocket = new Socket();
-        mSocket.setTcpNoDelay(true);
+        mSocket = new DatagramSocket();
+        mSocket.setReuseAddress(true);
         mSocket.setTrafficClass(0x10);
-        mSocket.setPerformancePreferences(1,0,2);
-        mSocket.connect(new InetSocketAddress(ipAddress, 7777), 1000);
-        mLogger.i("Connected to" + ipAddress);
+        mServerAddress = new InetSocketAddress(ipAddress,7777);
 
         mLogger.i("setting work to sound detector...");
         mSoundDetector.setWork(new Runnable() {
@@ -56,24 +54,19 @@ public class Client {
     }
     public void sendAndWaitForResponse() throws IOException, ClassNotFoundException, InterruptedException {
         tsSoundDetectedAt = new ArrayList<TimeStamp>();
-        OutputStream outputStream = mSocket.getOutputStream();
-        InputStream inputStream = mSocket.getInputStream();
 
         List<TimeStamp> tsSentAt = new ArrayList<TimeStamp>();
         List<TimeStamp> tsGotResponseAt = new ArrayList<TimeStamp>();
         List<TimeStamp> tsResponseTimestamp = new ArrayList<TimeStamp>();
 
         for (int i = 0; i < 30; i++) {
-            //logger.i("Sending request");
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
+            //mLogger.i("Sending request");
             tsSentAt.add(new TimeStamp());
-            objectOutputStream.writeObject(new GetTimestampReq());
-
-
-            //logger.i("waiting for response...");
-            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream); //this blocks
+            DatagramSocketIO.send(mSocket,mServerAddress,new GetTimestampReq());
+            //mLogger.i("waiting for response...");
+            ReceivedData receivedData = DatagramSocketIO.receive(mSocket);
             tsGotResponseAt.add(new TimeStamp());
-            TimeStamp response = (TimeStamp) objectInputStream.readObject();
+            TimeStamp response = (TimeStamp) receivedData.getSerializable();
             tsResponseTimestamp.add(response);
         }
 
@@ -97,15 +90,10 @@ public class Client {
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
         {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-
-            PlayAudioReq req = new PlayAudioReq();
 
             mLogger.i("Sending playAudioRequest");
-            objectOutputStream.writeObject(req);
+            DatagramSocketIO.send(mSocket,mServerAddress,new PlayAudioReq());
             mSoundDetector.enable();
-//            long tSentAt = System.currentTimeMillis();
-
             mLogger.i("waiting for response...");
 
             try {
@@ -113,8 +101,8 @@ public class Client {
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
-            TimeStamp tPlayedAt = (TimeStamp) objectInputStream.readObject();
+            ReceivedData receivedData = DatagramSocketIO.receive(mSocket);
+            TimeStamp tPlayedAt = (TimeStamp) receivedData.getSerializable();
             tsPlayedAt.add(tPlayedAt);
             mSoundDetector.disable();
         }
