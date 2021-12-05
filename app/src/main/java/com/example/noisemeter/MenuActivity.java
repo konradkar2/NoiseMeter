@@ -6,7 +6,9 @@ import androidx.core.app.ActivityCompat;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.AudioManager;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
@@ -36,6 +38,29 @@ public class MenuActivity extends AppCompatActivity {
         if (!hasPermissions(this, PERMISSIONS)) {
             ActivityCompat.requestPermissions(this, PERMISSIONS, PERMISSION_ALL);
         }
+
+        boolean hasLowLatencyFeature =
+                getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUDIO_LOW_LATENCY);
+
+        boolean hasProFeature =
+                getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUDIO_PRO);
+
+        Log.e("[LowLatency]", "Low latency: " + String.valueOf(hasLowLatencyFeature));
+        Log.e("[LowLatency]", "System feture: " + String.valueOf(hasProFeature));
+
+        AudioManager am = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+        String sampleRateStr = am.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+        int sampleRate = Integer.parseInt(sampleRateStr);
+        if (sampleRate == 0) sampleRate = 44100; // Use a default value if property not found
+
+        Log.e("[Latency]", "Optimal sampling: " + sampleRate);
+
+        String framesPerBuffer = am.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
+        int framesPerBufferInt = Integer.parseInt(framesPerBuffer);
+        if (framesPerBufferInt == 0) framesPerBufferInt = 256; // Use default
+
+        Log.e("[Latency]", "Optimal buffer: " + framesPerBufferInt);
+
     }
 
     public static boolean hasPermissions(Context context, String... permissions) {

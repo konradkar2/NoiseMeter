@@ -8,6 +8,7 @@ import java.net.Socket;
 public class Server {
     public void ListenAndSendResponse() throws IOException, ClassNotFoundException, InterruptedException {
         ServerSocket ss = new ServerSocket(7777);
+
         Logger logger = Logger.instance();
         logger.i("ServerSocket awaiting connections...");
 

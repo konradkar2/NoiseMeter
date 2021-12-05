@@ -10,7 +10,6 @@ import com.example.noisemeter.messages.PlayAudioReq;
 import com.example.noisemeter.messages.TimeStamp;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -62,6 +61,7 @@ public class Client {
         List<TimeStamp> tsSentAt = new ArrayList<TimeStamp>();
         List<TimeStamp> tsGotResponseAt = new ArrayList<TimeStamp>();
         List<TimeStamp> tsResponseTimestamp = new ArrayList<TimeStamp>();
+        Results res = new Results();
 
         for (int i = 0; i < 30; i++) {
             //logger.i("Sending request");
@@ -80,20 +80,27 @@ public class Client {
         List<Double> offsetList = new ArrayList<>();
         long size = tsSentAt.size();
 
+        res.rtts = new ArrayList<Double>();
+        double bestRtt = 10000.0;
+        int bestOffsetIdx = 0;
         for(int i = 0 ; i< size;i++)
         {
             double rtt = tsGotResponseAt.get(i).get() - tsSentAt.get(i).get();
             rtt = rtt/2.0;
+            res.rtts.add(rtt);
+            if(rtt < bestRtt) {
+                bestOffsetIdx = i;
+                bestRtt = rtt;
+            }
             mLogger.i("rtt:" + String.valueOf(rtt));
             double clockOffset = tsResponseTimestamp.get(i).get() - tsSentAt.get(i).get() + rtt;
             offsetList.add(clockOffset);
         }
 
-        Collections.sort(offsetList);
-        mLogger.i("offset list"+offsetList.toString());
-        double clockOffsetAvg = ((offsetList.get(14) + offsetList.get(15))/2);
+        res.offsets = offsetList;
+        double clockOffsetBest = offsetList.get(bestOffsetIdx);
 
-        mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
+        mLogger.i("Our offset to server is: " + clockOffsetBest + " [ms] ");
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
         {
@@ -104,7 +111,6 @@ public class Client {
             mLogger.i("Sending playAudioRequest");
             objectOutputStream.writeObject(req);
             mSoundDetector.enable();
-//            long tSentAt = System.currentTimeMillis();
 
             mLogger.i("waiting for response...");
 
@@ -119,6 +125,10 @@ public class Client {
             mSoundDetector.disable();
         }
 
+
+        res.clockOffset = clockOffsetBest;
+        res.rawDelays = new ArrayList<Double>();
+
         if(tsPlayedAt.size() != tsSoundDetectedAt.size())
         {
             mLogger.e("Not all signals were detected...");
@@ -130,16 +140,17 @@ public class Client {
                 long rawOffset = tsSoundDetectedAt.get(i).get() - tsPlayedAt.get(i).get();
 //                long rtt = tsPlayedAt.get(i).get() - tsSoundSentAt.get(i).get() - (long) clockOffsetAvg;
 //                mLogger.i("Rtt: " + rtt);
-                mLogger.i("clockOffsetAvg: " + clockOffsetAvg);
                 mLogger.i("Probe #" + i);
                 mLogger.e("Raw delay: " + rawOffset);
-                double offset = (double) rawOffset + clockOffsetAvg;
+                res.rawDelays.add((double) rawOffset);
+                double offset = (double) rawOffset + clockOffsetBest;
 
                 mLogger.e("delay: " + offset);
+                res.delays.add(offset);
             }
         }
 
-
+        Global.instance().setResults(res);
     }
 
     private String getHotspotAdress(){

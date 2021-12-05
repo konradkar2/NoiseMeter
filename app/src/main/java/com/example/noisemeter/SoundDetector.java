@@ -50,7 +50,9 @@ public class SoundDetector {
             while (true) {
                 synchronized (lock) {
                     if (mEnabled && mWork != null) {
-                        if (getAmplitudeDb() > mThresholdDb) {
+                        double amp = getAmplitudeDb();
+                        android.util.Log.e("[SoundDetector]", "Db level: " + amp);
+                        if (amp > mThresholdDb) {
                             mWork.run();
                         }
                     }
@@ -72,6 +74,8 @@ public class SoundDetector {
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mRecorder.setOutputFile(mFilepath);
+        mRecorder.setAudioSamplingRate(96000);
+
         try {
             mRecorder.prepare();
 

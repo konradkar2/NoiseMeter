@@ -22,11 +22,15 @@ public class MainActivityClient extends AppCompatActivity {
     Button mBtnTest;
     Client client;
     SoundDetector mSoundDetector;
+    HTTPServer server;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_client);
+
+        server = new HTTPServer();
+        server.start();
 
         mBtnTest = (Button) findViewById(R.id.btnTest);
         mScrollView = (ScrollView) findViewById(R.id.scrollViewLog);
@@ -95,6 +99,12 @@ public class MainActivityClient extends AppCompatActivity {
                 }).start();
             }
         });
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        server.stop();
     }
 
 }
