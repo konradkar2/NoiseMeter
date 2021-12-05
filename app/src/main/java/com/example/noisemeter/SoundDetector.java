@@ -10,7 +10,7 @@ public class SoundDetector {
     private int mThresholdDb;
     private long mPollingIntervalMs;
     private Boolean mEnabled = false;
-    private IHandleAmplitude mHandler = null;
+    private boolean mIsSoundDetected = false;
     private final Object lock = new Object();
 
     public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
@@ -34,10 +34,22 @@ public class SoundDetector {
             mEnabled = false;
         }
     }
-
-    public void setHandler(IHandleAmplitude handler) {
+    public int waitForSound() throws Exception {
         synchronized (lock) {
-            mHandler = handler;
+            if(mIsSoundDetected)
+                return 10;
+            lock.wait(3000);
+            if(!mIsSoundDetected)
+            {
+                throw new Exception("Failed to detect sound");
+            }
+            return 10;
+        }
+    }
+    public void waitForNoSound() throws InterruptedException {
+        synchronized (lock) {
+            if(mIsSoundDetected)
+                lock.wait();
         }
     }
 
@@ -46,12 +58,18 @@ public class SoundDetector {
         {
             while (true) {
                 synchronized (lock) {
-                    if (mEnabled && mHandler != null) {
-                        double amplitudeDb = getAmplitudeDb();
-                        if (amplitudeDb > mThresholdDb)
-                            mHandler.handle(amplitudeDb,true);
-                        else
-                            mHandler.handle(amplitudeDb,false);
+                    if (mEnabled) {
+                        Double amplitudeDb = getAmplitudeDb();
+                        if(amplitudeDb != null)
+                        {
+                            boolean isSoundDetected = amplitudeDb > mThresholdDb;
+                            android.util.Log.w("[Monkey]", "isSoundDetected: " + Boolean.toString(isSoundDetected));
+                            if(isSoundDetected != mIsSoundDetected){
+                                mIsSoundDetected = isSoundDetected;
+                                lock.notify();
+                            }
+                        }
+
                     }
                 }
                 try {
@@ -95,10 +113,14 @@ public class SoundDetector {
         }
     }
 
-    private double getAmplitudeDb() {
+    private Double getAmplitudeDb() {
         double amp = getAmplitude();
         android.util.Log.w("[Monkey]", "p: " + Double.toString(amp));
-        return 20 * Math.log10(amp);
+        if(amp > 0)
+        {
+            return 20 * Math.log10(amp);
+        }
+        return null;
     }
 
     private double getAmplitude() {

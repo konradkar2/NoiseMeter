@@ -78,12 +78,10 @@ public class MainActivityClient extends AppCompatActivity {
                         }
                         try {
                             client.sendAndWaitForResponse();
-                        } catch (IOException e) {
+                        }
+                        catch (Exception e) {
                             e.printStackTrace();
-                        } catch (ClassNotFoundException e) {
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            client = null;
                         }
                         mBtnTest.post(new Runnable() {
                             @Override
