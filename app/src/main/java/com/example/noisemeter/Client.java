@@ -39,6 +39,7 @@ public class Client {
         mSocket = new Socket();
         mSocket.setTcpNoDelay(true);
         mSocket.setTrafficClass(0x10);
+        mSocket.setPerformancePreferences(1,0,2);
         mSocket.connect(new InetSocketAddress(ipAddress, 7777), 1000);
         mLogger.i("Connected to" + ipAddress);
 
@@ -74,8 +75,6 @@ public class Client {
             tsGotResponseAt.add(new TimeStamp());
             TimeStamp response = (TimeStamp) objectInputStream.readObject();
             tsResponseTimestamp.add(response);
-
-            Thread.sleep(100);
         }
 
         List<Double> offsetList = new ArrayList<>();
@@ -96,7 +95,6 @@ public class Client {
 
         mLogger.i("Our avg offset to server is: " + clockOffsetAvg + " [ms] ");
         List<TimeStamp> tsPlayedAt = new ArrayList<TimeStamp>();
-        List<TimeStamp> tsSoundSentAt = new ArrayList<TimeStamp>();
         for (int i = 0; i < 5; i++)
         {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
@@ -105,14 +103,13 @@ public class Client {
 
             mLogger.i("Sending playAudioRequest");
             objectOutputStream.writeObject(req);
-            tsSoundSentAt.add(new TimeStamp());
             mSoundDetector.enable();
 //            long tSentAt = System.currentTimeMillis();
 
             mLogger.i("waiting for response...");
 
             try {
-                Thread.sleep(2000);
+                Thread.sleep(500);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -131,16 +128,16 @@ public class Client {
             for(int i = 0; i<tsSoundDetectedAt.size(); i++)
             {
                 long rawOffset = tsSoundDetectedAt.get(i).get() - tsPlayedAt.get(i).get();
-                long rtt = tsPlayedAt.get(i).get() - tsSoundSentAt.get(i).get() - (long) clockOffsetAvg;
-                mLogger.i("Rtt: " + rtt);
+//                long rtt = tsPlayedAt.get(i).get() - tsSoundSentAt.get(i).get() - (long) clockOffsetAvg;
+//                mLogger.i("Rtt: " + rtt);
+                mLogger.i("clockOffsetAvg: " + clockOffsetAvg);
                 mLogger.i("Probe #" + i);
                 mLogger.e("Raw delay: " + rawOffset);
                 double offset = (double) rawOffset + clockOffsetAvg;
+
                 mLogger.e("delay: " + offset);
             }
         }
-
-        boolean stop = true;
 
 
     }

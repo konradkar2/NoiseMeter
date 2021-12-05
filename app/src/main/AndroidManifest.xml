@@ -17,6 +17,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NoiseMeter" >
         <activity
+            android:name=".MainActivityClient"
+            android:exported="false"/>
+        <activity
+            android:name=".MainActivityServer"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="false" />
         <activity

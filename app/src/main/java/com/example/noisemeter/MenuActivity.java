@@ -11,20 +11,18 @@ import android.view.View;
 import android.widget.Button;
 
 public class MenuActivity extends AppCompatActivity {
-    private Button mButton;
-        @Override
+    private Button mBtnServer;
+    private Button mBtnClient;
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_menu);
 
-        mButton = (Button) findViewById(R.id.button);
-        mButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                openMain();
-            }
-        });
+        mBtnServer = (Button) findViewById(R.id.btnChooseServer);
+        mBtnServer.setOnClickListener(v -> openMainServer());
 
+        mBtnClient = (Button) findViewById(R.id.btnChooseClient);
+        mBtnClient.setOnClickListener(v -> openMainClient());
 
         int PERMISSION_ALL = 1;
         String[] PERMISSIONS = {
@@ -51,8 +49,13 @@ public class MenuActivity extends AppCompatActivity {
         return true;
     }
 
-    public void openMain() {
-        Intent intent = new Intent(this, MainActivity.class);
+    public void openMainServer() {
+        Intent intent = new Intent(this, MainActivityServer.class);
+        startActivity(intent);
+    }
+
+    public void openMainClient() {
+        Intent intent = new Intent(this, MainActivityClient.class);
         startActivity(intent);
     }
 

@@ -1,7 +1,5 @@
 package com.example.noisemeter;
 
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.ContextWrapper;
 import android.os.Bundle;
 import android.text.Editable;
@@ -11,39 +9,40 @@ import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AppCompatActivity;
+
 import java.io.File;
 import java.io.IOException;
 
 
-public class MainActivity extends AppCompatActivity {
-    TextView mTextView;
+public class MainActivityClient extends AppCompatActivity {
+    TextView mTextViewLogClient;
     LogStoreTextView logStoreTextView;
     ScrollView mScrollView;
-    Button mStartServerButton;
-    Button mSyncClientButton;
+    Button mBtnTest;
     Client client;
     SoundDetector mSoundDetector;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        mTextView = (TextView) findViewById(R.id.textViewLog);
-        logStoreTextView = new LogStoreTextView(mTextView);
-        Logger.instance().initialize(logStoreTextView);
-        Logger.instance().i("Test");
+        setContentView(R.layout.activity_main_client);
 
-        mStartServerButton = (Button) findViewById(R.id.syncServer);
-        mSyncClientButton = (Button) findViewById(R.id.syncClient);
+        mBtnTest = (Button) findViewById(R.id.btnTest);
+        mScrollView = (ScrollView) findViewById(R.id.scrollViewLog);
+        mTextViewLogClient = (TextView) findViewById(R.id.textViewLog);
+        logStoreTextView = new LogStoreTextView(mTextViewLogClient);
+
+        Logger.instance().initialize(logStoreTextView);
 
         ContextWrapper cw = new ContextWrapper(this);
         String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
-        long pollingRateMs = 20;
-        int thresholdDb = 54;
+        long pollingRateMs = 1;
+        int thresholdDb = 33;
+       
         mSoundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs);
 
-        mScrollView = (ScrollView) findViewById(R.id.scrollViewLog);
-
-        mTextView.addTextChangedListener(new TextWatcher() {
+        mTextViewLogClient.addTextChangedListener(new TextWatcher() {
 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -63,36 +62,10 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-        mStartServerButton.setOnClickListener(new View.OnClickListener() {
+        mBtnTest.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                mStartServerButton.setEnabled(false);
-                mSyncClientButton.setEnabled(false);
-                new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Server server = new Server();
-                        try {
-                            server.ListenAndSendResponse();
-                        } catch (IOException | ClassNotFoundException | InterruptedException e) {
-                            e.printStackTrace();
-                        }
-                        mStartServerButton.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                mStartServerButton.setEnabled(true);
-                            }
-                        });
-                    }
-                }).start();
-            }
-        });
-
-        mSyncClientButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                mSyncClientButton.setEnabled(false);
-                mStartServerButton.setEnabled(false);
+                mBtnTest.setEnabled(false);
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
@@ -112,16 +85,16 @@ public class MainActivity extends AppCompatActivity {
                         } catch (InterruptedException e) {
                             e.printStackTrace();
                         }
-                        mSyncClientButton.post(new Runnable() {
+                        mBtnTest.post(new Runnable() {
                             @Override
                             public void run() {
-                                mSyncClientButton.setEnabled(true);
+                                mBtnTest.setEnabled(true);
                             }
                         });
                     }
                 }).start();
-
             }
         });
     }
+
 }

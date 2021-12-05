@@ -14,6 +14,7 @@ public class Server {
         Socket socket = ss.accept();
         socket.setTcpNoDelay(true);
         socket.setTrafficClass(0x10);
+        socket.setPerformancePreferences(1,0,2);
         logger.i("traffic class: " + socket.getTrafficClass());
 
         logger.i("Connection from " + socket + "!");

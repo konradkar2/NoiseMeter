@@ -49,10 +49,11 @@ public class SoundDetector {
         {
             while (true) {
                 synchronized (lock) {
-                    if (mEnabled && mWork != null)
+                    if (mEnabled && mWork != null) {
                         if (getAmplitudeDb() > mThresholdDb) {
                             mWork.run();
                         }
+                    }
                 }
                 try {
                     Thread.sleep(mPollingIntervalMs);
@@ -67,9 +68,9 @@ public class SoundDetector {
     private void initializeRecorder() {
         File file = new File(mFilepath);
         mRecorder = new MediaRecorder();
-        mRecorder.setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION);
+        mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+        mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         mRecorder.setOutputFile(mFilepath);
         try {
             mRecorder.prepare();

@@ -2,6 +2,10 @@ package com.example.noisemeter;
 
 import static android.media.AudioManager.STREAM_MUSIC;
 import static android.media.ToneGenerator.TONE_DTMF_1;
+import static android.media.ToneGenerator.TONE_DTMF_2;
+import static android.media.ToneGenerator.TONE_DTMF_3;
+import static android.media.ToneGenerator.TONE_DTMF_9;
+import static android.media.ToneGenerator.TONE_DTMF_S;
 import static android.media.ToneGenerator.TONE_PROP_BEEP;
 
 import android.media.ToneGenerator;
@@ -18,14 +22,15 @@ public class MsgHandler {
             return requestedAt;
         }
         if(obj instanceof PlayAudioReq){
-            TimeStamp response =  new TimeStamp();
+
             ToneGenerator toneGenerator = new ToneGenerator(STREAM_MUSIC,100);
 
 
-            int playForMs = 200;
+            int playForMs = 100;
 //            Thread.sleep(1000);
             //this runs on new thread, to be replaced
-            toneGenerator.startTone(TONE_DTMF_1,playForMs);
+            TimeStamp response =  new TimeStamp();
+            toneGenerator.startTone(TONE_DTMF_9,playForMs);
             try {
                 //simulate blocking
                 Thread.sleep(playForMs);
