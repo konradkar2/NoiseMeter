@@ -26,6 +26,8 @@ public class Client {
     Logger mLogger;
     SoundDetector mSoundDetector;
     List<TimeStamp> tsSoundDetectedAt;
+    boolean canAddSoundDetectedAtTs = true;
+
     public Client(Context context, SoundDetector soundDetector) throws Exception {
         mLogger = Logger.instance();
         mContext = context;
@@ -36,6 +38,7 @@ public class Client {
             throw new Exception("failed to get addresss");
         }
         mSocket = new Socket();
+        mSocket.setSoTimeout(5000);
         mSocket.setTcpNoDelay(true);
         mSocket.setTrafficClass(0x10);
         mSocket.setPerformancePreferences(1,0,2);
@@ -43,15 +46,6 @@ public class Client {
         mLogger.i("Connected to" + ipAddress);
 
         mLogger.i("setting work to sound detector...");
-        mSoundDetector.setWork(new Runnable() {
-            @Override
-            public void run() {
-                mLogger.i("Got something in detector");
-                tsSoundDetectedAt.add(new TimeStamp());
-                mSoundDetector.disable();
-            }
-        });
-
     }
     public void sendAndWaitForResponse() throws IOException, ClassNotFoundException, InterruptedException {
         tsSoundDetectedAt = new ArrayList<TimeStamp>();
@@ -105,23 +99,24 @@ public class Client {
         for (int i = 0; i < 5; i++)
         {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(outputStream);
-
             PlayAudioReq req = new PlayAudioReq();
-
             mLogger.i("Sending playAudioRequest");
             objectOutputStream.writeObject(req);
+
             mSoundDetector.enable();
-
-            mLogger.i("waiting for response...");
-
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            try{
+                mSoundDetector.waitForSound();
+                tsSoundDetectedAt.add(new TimeStamp());
             }
+            catch (Exception e)
+            {
+                tsSoundDetectedAt.add(null);
+            }
+            mLogger.i("waiting for response...");
             ObjectInputStream objectInputStream = new ObjectInputStream(inputStream);
             TimeStamp tPlayedAt = (TimeStamp) objectInputStream.readObject();
             tsPlayedAt.add(tPlayedAt);
+            mSoundDetector.waitForNoSound();
             mSoundDetector.disable();
         }
 
@@ -137,6 +132,10 @@ public class Client {
         {
             for(int i = 0; i<tsSoundDetectedAt.size(); i++)
             {
+                if(tsSoundDetectedAt.get(i) == null){
+                    mLogger.i("Probe #" + i + " sound not detected");
+                    continue;
+                }
                 long rawOffset = tsSoundDetectedAt.get(i).get() - tsPlayedAt.get(i).get();
 //                long rtt = tsPlayedAt.get(i).get() - tsSoundSentAt.get(i).get() - (long) clockOffsetAvg;
 //                mLogger.i("Rtt: " + rtt);

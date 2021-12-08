@@ -15,6 +15,8 @@ import android.widget.Button;
 public class MenuActivity extends AppCompatActivity {
     private Button mBtnServer;
     private Button mBtnClient;
+    private Button mBtnNoiseMeter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -26,6 +28,8 @@ public class MenuActivity extends AppCompatActivity {
         mBtnClient = (Button) findViewById(R.id.btnChooseClient);
         mBtnClient.setOnClickListener(v -> openMainClient());
 
+        mBtnNoiseMeter = (Button) findViewById(R.id.btnNoiseMeter);
+        mBtnNoiseMeter.setOnClickListener(v -> openNoiseMeter());
         int PERMISSION_ALL = 1;
         String[] PERMISSIONS = {
                 android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -81,6 +85,10 @@ public class MenuActivity extends AppCompatActivity {
 
     public void openMainClient() {
         Intent intent = new Intent(this, MainActivityClient.class);
+        startActivity(intent);
+    }
+    public void openNoiseMeter() {
+        Intent intent = new Intent(this, NoiseMeter.class);
         startActivity(intent);
     }
 

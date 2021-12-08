@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
                         Server server = new Server();
                         try {
                             server.ListenAndSendResponse();
-                        } catch (IOException | ClassNotFoundException | InterruptedException e) {
+                        } catch (Exception e) {
                             e.printStackTrace();
                         }
                         mStartServerButton.post(new Runnable() {

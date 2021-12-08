@@ -1,19 +1,17 @@
 package com.example.noisemeter;
 
-import android.content.ContextWrapper;
 import android.media.MediaRecorder;
 
 import java.io.File;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.FutureTask;
 
 public class SoundDetector {
     private MediaRecorder mRecorder;
     private String mFilepath;
     private int mThresholdDb;
     private long mPollingIntervalMs;
-    private Boolean mEnabled = false;
-    private Runnable mWork = null;
+    private boolean mEnabled = false;
+    private boolean mIsSoundDetected = false;
+    private double mLastAmplitudeDb = 0.0;
     private final Object lock = new Object();
 
     public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
@@ -37,10 +35,22 @@ public class SoundDetector {
             mEnabled = false;
         }
     }
-
-    public void setWork(Runnable work) {
+    public double waitForSound() throws Exception {
         synchronized (lock) {
-            mWork = work;
+            if(mIsSoundDetected)
+                return mLastAmplitudeDb;
+            lock.wait(3000);
+            if(!mIsSoundDetected)
+            {
+                throw new Exception("Failed to detect sound");
+            }
+            return mLastAmplitudeDb;
+        }
+    }
+    public void waitForNoSound() throws InterruptedException {
+        synchronized (lock) {
+            if(mIsSoundDetected)
+                lock.wait();
         }
     }
 
@@ -49,12 +59,19 @@ public class SoundDetector {
         {
             while (true) {
                 synchronized (lock) {
-                    if (mEnabled && mWork != null) {
-                        double amp = getAmplitudeDb();
-                        android.util.Log.e("[SoundDetector]", "Db level: " + amp);
-                        if (amp > mThresholdDb) {
-                            mWork.run();
+                    if (mEnabled) {
+                        Double amplitudeDb = getAmplitudeDb();
+                        if(amplitudeDb != null)
+                        {
+                            mLastAmplitudeDb = amplitudeDb;
+                            boolean isSoundDetected = amplitudeDb > mThresholdDb;
+                            android.util.Log.w("[Monkey]", "isSoundDetected: " + Boolean.toString(isSoundDetected));
+                            if(isSoundDetected != mIsSoundDetected){
+                                mIsSoundDetected = isSoundDetected;
+                                lock.notify();
+                            }
                         }
+
                     }
                 }
                 try {
@@ -100,10 +117,14 @@ public class SoundDetector {
         }
     }
 
-    private double getAmplitudeDb() {
+    private Double getAmplitudeDb() {
         double amp = getAmplitude();
         android.util.Log.w("[Monkey]", "p: " + Double.toString(amp));
-        return 20 * Math.log10(amp);
+        if(amp > 0)
+        {
+            return 20 * Math.log10(amp);
+        }
+        return null;
     }
 
     private double getAmplitude() {

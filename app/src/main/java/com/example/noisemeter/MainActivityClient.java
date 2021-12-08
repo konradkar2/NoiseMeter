@@ -41,8 +41,8 @@ public class MainActivityClient extends AppCompatActivity {
 
         ContextWrapper cw = new ContextWrapper(this);
         String filepath = cw.getExternalCacheDir() + File.separator + "record.3gp";
-        long pollingRateMs = 1;
-        int thresholdDb = 33;
+        long pollingRateMs = 5;
+        int thresholdDb = 50;
        
         mSoundDetector = new SoundDetector(filepath, thresholdDb, pollingRateMs);
 
@@ -82,12 +82,10 @@ public class MainActivityClient extends AppCompatActivity {
                         }
                         try {
                             client.sendAndWaitForResponse();
-                        } catch (IOException e) {
+                        }
+                        catch (Exception e) {
                             e.printStackTrace();
-                        } catch (ClassNotFoundException e) {
-                            e.printStackTrace();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
+                            client = null;
                         }
                         mBtnTest.post(new Runnable() {
                             @Override

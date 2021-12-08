@@ -31,9 +31,6 @@ public class MainActivityServer extends AppCompatActivity {
 
         Logger.instance().initialize(logStoreTextView);
 
-        mBtnRestartServer.setEnabled(false);
-        startServer();
-
         mBtnRestartServer.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -56,11 +53,12 @@ public class MainActivityServer extends AppCompatActivity {
     }
 
     public void startServer() {
+        mBtnRestartServer.setEnabled(false);
         new Thread(() -> {
             Server server = new Server();
             try {
                 server.ListenAndSendResponse();
-            } catch (IOException | ClassNotFoundException | InterruptedException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
             mBtnRestartServer.post(() -> mBtnRestartServer.setEnabled(true));
