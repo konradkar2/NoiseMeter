@@ -65,4 +65,13 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <Button
+        android:id="@+id/btnNoiseMeter"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="true"
+        android:text="Plot noise level"
+        tools:layout_editor_absoluteX="119dp"
+        tools:layout_editor_absoluteY="460dp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

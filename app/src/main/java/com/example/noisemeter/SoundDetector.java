@@ -9,8 +9,9 @@ public class SoundDetector {
     private String mFilepath;
     private int mThresholdDb;
     private long mPollingIntervalMs;
-    private Boolean mEnabled = false;
+    private boolean mEnabled = false;
     private boolean mIsSoundDetected = false;
+    private double mLastAmplitudeDb = 0.0;
     private final Object lock = new Object();
 
     public SoundDetector(String filepath, int thresholdDb, long pollingIntervalMs) {
@@ -34,16 +35,16 @@ public class SoundDetector {
             mEnabled = false;
         }
     }
-    public int waitForSound() throws Exception {
+    public double waitForSound() throws Exception {
         synchronized (lock) {
             if(mIsSoundDetected)
-                return 10;
+                return mLastAmplitudeDb;
             lock.wait(3000);
             if(!mIsSoundDetected)
             {
                 throw new Exception("Failed to detect sound");
             }
-            return 10;
+            return mLastAmplitudeDb;
         }
     }
     public void waitForNoSound() throws InterruptedException {
@@ -62,6 +63,7 @@ public class SoundDetector {
                         Double amplitudeDb = getAmplitudeDb();
                         if(amplitudeDb != null)
                         {
+                            mLastAmplitudeDb = amplitudeDb;
                             boolean isSoundDetected = amplitudeDb > mThresholdDb;
                             android.util.Log.w("[Monkey]", "isSoundDetected: " + Boolean.toString(isSoundDetected));
                             if(isSoundDetected != mIsSoundDetected){
